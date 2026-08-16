@@ -264,7 +264,7 @@ input[type=range]{width:100%;accent-color:var(--shu);background:transparent}
 <script>
 "use strict";
 
-const RUNES = ["向","水","十","之"];
+const QRUNE = ["之","水","十","向"];   // 0左上紫 1右上棕 2左下綠 3右下黃
 const CW = [0, 1, 3, 2];               // 順時針環狀：左上→右上→右下→左下
 const QNAME = ["左上","右上","左下","右下"];
 const LR = 200, PR = 13;
@@ -282,7 +282,6 @@ const cfg = { type:"random", interval:1.0, speed:180, lead:4.0, gap:4.0,
 
 let phase = "idle";
 let t0 = 0, events = [], cursor = 0, endAt = 0;
-let quadRune = [0,1,2,3], lastRuneKey = "";
 let seqTop = [], seqBot = [], patternName = "";
 let px = 0, py = 0, hit = false, scale = 1;
 let topCells = [], botCells = [];
@@ -354,7 +353,7 @@ function buildRows(){
   const make = (q, i, row) => {
     const d = document.createElement("div");
     d.className = "cell";
-    d.textContent = RUNES[quadRune[q]];
+    d.textContent = QRUNE[q];
     if(cfg.assist) d.style.color = inkOf(q);
     row.appendChild(d);
     return d;
@@ -363,13 +362,7 @@ function buildRows(){
   seqBot.forEach((q,i) => botCells.push(make(q,i,rowBot)));
 }
 
-/* 每輪重新洗牌地板符文，且避免與上一輪完全相同 */
-function shuffleFloor(){
-  let k;
-  do { quadRune = shuffle([0,1,2,3]); k = quadRune.join(""); } while(k === lastRuneKey);
-  lastRuneKey = k;
-  runeEls.forEach((el,q) => el.textContent = RUNES[quadRune[q]]);
-}
+function paintFloor(){ runeEls.forEach((el,q) => el.textContent = QRUNE[q]); }
 
 /* ── 一輪 ─────────────────────────────────────────────── */
 function newRound(){
@@ -377,7 +370,6 @@ function newRound(){
   patternName = type === "clock" ? "時鐘型" : "對稱型";
   seqTop = makeSet(type);
   seqBot = makeSetDiff(type, seqTop);
-  shuffleFloor();
   buildRows();
 
   events = [];
@@ -422,7 +414,7 @@ function finish(ok, ev){
   hudBig.className = "big " + (ok ? "result-ok" : "result-no");
   hudSmall.textContent = ok
     ? `${patternName} · 完美通過 · 空白鍵再來`
-    : `${patternName} · 死在「${RUNES[quadRune[ev.q]]}」${QNAME[ev.q]}`;
+    : `${patternName} · 死在「${QRUNE[ev.q]}」${QNAME[ev.q]}`;
   tlPhase.textContent = "結束"; tlNext.textContent = "—"; tlfill.style.width = "100%";
   $("#vType").textContent = patternName;
 
@@ -524,7 +516,7 @@ $("#btnStart").addEventListener("click", newRound);
 const t0type = rollType();
 patternName = t0type === "clock" ? "時鐘型" : "對稱型";
 seqTop = makeSet(t0type); seqBot = makeSetDiff(t0type, seqTop);
-shuffleFloor(); buildRows();
+paintFloor(); buildRows();
 topCells.concat(botCells).forEach(c => c.classList.add("blown"));
 relayout();
 requestAnimationFrame(loop);
