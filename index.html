@@ -235,8 +235,8 @@ input[type=range]{width:100%;accent-color:var(--shu);background:transparent}
         </div>
 
         <div class="field">
-          <label>移動速度 <b id="vSpeed">300</b></label>
-          <input type="range" id="rgSpeed" min="180" max="460" step="20" value="300">
+          <label>移動速度 <b id="vSpeed">180</b></label>
+          <input type="range" id="rgSpeed" min="120" max="460" step="20" value="180">
         </div>
 
         <div class="field">
@@ -277,7 +277,7 @@ const rowTop = $("#rowTop"), rowBot = $("#rowBot");
 const hud = $("#hud"), hudBig = $("#hudBig"), hudSmall = $("#hudSmall"), veil = $("#veil");
 const tlfill = $("#tlfill"), tlPhase = $("#tlPhase"), tlNext = $("#tlNext");
 
-const cfg = { type:"random", interval:1.0, speed:300, lead:4.0, gap:4.0,
+const cfg = { type:"random", interval:1.0, speed:180, lead:4.0, gap:4.0,
               assist:false, tell:false, sound:true, auto:false, survive:false };
 
 let phase = "idle";
