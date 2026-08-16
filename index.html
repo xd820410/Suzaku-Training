@@ -126,6 +126,16 @@ header{margin-bottom:20px}
 .cross i:nth-child(1){left:50%;top:0;bottom:0;width:1px;transform:translateX(-.5px)}
 .cross i:nth-child(2){top:50%;left:0;right:0;height:1px;transform:translateY(-.5px)}
 
+.hole{
+  position:absolute;left:50%;top:50%;
+  width:calc(var(--arena) * .13);height:calc(var(--arena) * .13);
+  transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle at 50% 38%, #000 0%, #060303 58%, #1e0b06 100%);
+  box-shadow:
+    0 0 0 2px rgba(217,164,65,.32),
+    inset 0 7px 16px rgba(0,0,0,.95),
+    0 0 26px 5px rgba(212,55,42,.22);
+}
 .player{
   position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;
   border-radius:50%;pointer-events:none;
@@ -192,6 +202,7 @@ input[type=range]{width:100%;accent-color:var(--shu);background:transparent}
         <div class="quad q2" data-q="2"><span class="rune"></span></div>
         <div class="quad q3" data-q="3"><span class="rune"></span></div>
         <div class="cross"><i></i><i></i></div>
+        <div class="hole"></div>
         <div class="player" id="player"></div>
         <div class="veil" id="veil"></div>
         <div class="hud" id="hud">
@@ -267,7 +278,7 @@ input[type=range]{width:100%;accent-color:var(--shu);background:transparent}
 const QRUNE = ["之","水","十","向"];   // 0左上紫 1右上棕 2左下綠 3右下黃
 const CW = [0, 1, 3, 2];               // 順時針環狀：左上→右上→右下→左下
 const QNAME = ["左上","右上","左下","右下"];
-const LR = 200, PR = 13;
+const LR = 200, PR = 13, HOLE = 26;   // 洞半徑＝角色直徑
 
 const $ = s => document.querySelector(s);
 const arenaEl = $("#arena"), playerEl = $("#player");
@@ -283,7 +294,7 @@ const cfg = { type:"random", interval:1.0, speed:180, lead:4.0, gap:4.0,
 let phase = "idle";
 let t0 = 0, events = [], cursor = 0, endAt = 0;
 let seqTop = [], seqBot = [], patternName = "";
-let px = 0, py = 0, hit = false, scale = 1;
+let px = 0, py = LR - PR, hit = false, scale = 1, deathNote = "";
 let topCells = [], botCells = [];
 
 const shuffle = a => { for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]];} return a; };
@@ -379,8 +390,8 @@ function newRound(){
   seqBot.forEach((q,i) => events.push({ t: base + i*iv, q, row:1, i }));
   endAt = events[events.length-1].t + 900;
 
-  cursor = 0; hit = false;
-  px = 0; py = 0; drawPlayer();
+  cursor = 0; hit = false; deathNote = "";
+  px = 0; py = LR - PR; drawPlayer();          // 起始：六點鐘方向靠外側
   playerEl.classList.remove("dead");
   quadEls.forEach(el => el.classList.remove("boom","tell"));
 
@@ -397,15 +408,18 @@ function fire(ev){
   const el = quadEls[ev.q];
   el.classList.remove("boom","tell"); void el.offsetWidth; el.classList.add("boom");
   sBoom();
-  if(!hit && currentQuad() === ev.q){
-    hit = true;
-    playerEl.classList.add("dead");
-    sHit();
-    if(!cfg.survive) finish(false, ev);
-  }
+  if(!hit && currentQuad() === ev.q) die(`死在「${QRUNE[ev.q]}」${QNAME[ev.q]}`);
 }
 
-function finish(ok, ev){
+function die(note){
+  if(hit) return;
+  hit = true; deathNote = note;
+  playerEl.classList.add("dead");
+  sHit();
+  if(!cfg.survive) finish(false);
+}
+
+function finish(ok){
   phase = "over";
   if(ok) sWin();
 
@@ -414,7 +428,7 @@ function finish(ok, ev){
   hudBig.className = "big " + (ok ? "result-ok" : "result-no");
   hudSmall.textContent = ok
     ? `${patternName} · 完美通過 · 空白鍵再來`
-    : `${patternName} · 死在「${QRUNE[ev.q]}」${QNAME[ev.q]}`;
+    : `${patternName} · ${deathNote}`;
   tlPhase.textContent = "結束"; tlNext.textContent = "—"; tlfill.style.width = "100%";
   $("#vType").textContent = patternName;
 
@@ -440,6 +454,13 @@ function loop(now){
       const r = Math.hypot(px, py), max = LR - PR;
       if(r > max){ px = px / r * max; py = py / r * max; }
       drawPlayer();
+      if(r < HOLE){
+        die("掉進中央的洞");
+        if(cfg.survive){                        // 繼續練習：推回洞口外
+          const a = r > 0.001 ? Math.atan2(py, px) : Math.PI / 2;
+          px = Math.cos(a) * (HOLE + 1); py = Math.sin(a) * (HOLE + 1); drawPlayer();
+        }
+      }
     }
 
     const t = now - t0;
@@ -457,7 +478,7 @@ function loop(now){
         : `${nx.row === 0 ? "上排" : "下排"} ${nx.i + 1} / 8`);
       tlfill.style.width = Math.min(100, t / endAt * 100) + "%";
     }else if(t >= endAt){
-      finish(!hit, null);
+      finish(!hit);
     }
   }
   requestAnimationFrame(loop);
