@@ -314,6 +314,12 @@ function makeSet(type){
 function rollType(){
   return cfg.type === "random" ? (Math.random() < .5 ? "clock" : "mirror") : cfg.type;
 }
+/* 下排必須和上排不同 */
+function makeSetDiff(type, other){
+  let seq, guard = 0;
+  do { seq = makeSet(type); } while(seq.join("") === other.join("") && ++guard < 100);
+  return seq;
+}
 
 /* ── 音效 ─────────────────────────────────────────────── */
 let actx = null;
@@ -370,7 +376,7 @@ function newRound(){
   const type = rollType();
   patternName = type === "clock" ? "時鐘型" : "對稱型";
   seqTop = makeSet(type);
-  seqBot = makeSet(type);
+  seqBot = makeSetDiff(type, seqTop);
   shuffleFloor();
   buildRows();
 
@@ -517,7 +523,7 @@ $("#btnStart").addEventListener("click", newRound);
 /* ── 啟動 ─────────────────────────────────────────────── */
 const t0type = rollType();
 patternName = t0type === "clock" ? "時鐘型" : "對稱型";
-seqTop = makeSet(t0type); seqBot = makeSet(t0type);
+seqTop = makeSet(t0type); seqBot = makeSetDiff(t0type, seqTop);
 shuffleFloor(); buildRows();
 topCells.concat(botCells).forEach(c => c.classList.add("blown"));
 relayout();
