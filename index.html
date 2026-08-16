@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Suzuku Unreal</title>
+<style>
+/* ── 色票：朱・金・墨・和紙 ───────────────────────────── */
+:root{
+  --sumi:      #120d0c;
+  --tobi:      #2b1f1b;
+  --washi:     #ece1cc;
+  --washi-dim: #a4937c;
+  --shu:       #d4372a;
+  --kin:       #d9a441;
+  --kin-hi:    #f6d98a;
+
+  --q0: #a2469a;  --q0-ink: #f6a2ea;   /* 左上 */
+  --q1: #7d6a55;  --q1-ink: #e2d3ba;   /* 右上 */
+  --q2: #4f8266;  --q2-ink: #9df0c1;   /* 左下 */
+  --q3: #9a7d20;  --q3-ink: #ffe25c;   /* 右下 */
+
+  --serif: "Noto Serif TC","Source Han Serif TC","Songti TC","Songti SC","PMingLiU","MingLiU",serif;
+  --sans: "Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,-apple-system,sans-serif;
+  --mono: ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+
+  --arena: min(430px, 84vw);
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:var(--sans);
+  color:var(--washi);
+  background:
+    radial-gradient(120% 80% at 50% 0%, #3a1a12 0%, transparent 60%),
+    radial-gradient(100% 60% at 50% 100%, #4a1c10 0%, transparent 55%),
+    var(--sumi);
+  background-attachment:fixed;
+  overflow-x:hidden;
+  -webkit-tap-highlight-color:transparent;
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.05;
+  background-image:
+    repeating-linear-gradient(97deg, #fff 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(3deg, #fff 0 1px, transparent 1px 7px);
+}
+
+.wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:22px 18px 60px}
+
+/* ── 標題 ─────────────────────────────────────────────── */
+header{margin-bottom:20px}
+.mark{
+  font-family:var(--serif);font-size:32px;line-height:1;letter-spacing:.22em;
+  color:var(--washi);text-transform:uppercase;
+  text-shadow:0 0 24px rgba(212,55,42,.5);
+}
+.mark span{color:var(--shu)}
+
+/* ── 版面 ─────────────────────────────────────────────── */
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:26px;align-items:start}
+@media (max-width:900px){ .grid{grid-template-columns:1fr} }
+
+/* ── 中央舞台 ─────────────────────────────────────────── */
+.stage{
+  display:flex;flex-direction:column;align-items:center;gap:12px;
+  padding:20px 16px 22px;
+  border:1px solid rgba(217,164,65,.22);border-radius:4px;
+  background:linear-gradient(180deg, rgba(43,31,27,.72), rgba(18,13,12,.86));
+  box-shadow:0 0 0 1px rgba(0,0,0,.4) inset, 0 20px 60px -30px #000;
+}
+
+/* 符文列：一排八字 */
+.runerow{
+  display:grid;grid-template-columns:repeat(8,1fr);gap:5px;
+  width:var(--arena);
+}
+.cell{
+  position:relative;aspect-ratio:1 / 1.12;
+  display:grid;place-items:center;
+  border:1px solid rgba(236,225,204,.16);border-radius:3px;
+  background:linear-gradient(180deg,rgba(90,64,52,.5),rgba(30,21,19,.6));
+  font-family:var(--serif);font-size:calc(var(--arena) * .062);line-height:1;
+  color:var(--washi);
+  transition:transform .12s, filter .12s;
+}
+.cell.armed{border-color:var(--kin);box-shadow:0 0 0 1px var(--kin), 0 0 16px -2px rgba(217,164,65,.7)}
+.cell.blown{color:var(--shu);filter:saturate(.5) brightness(.55);border-color:rgba(212,55,42,.4)}
+.cell.pop{animation:pop .35s ease-out}
+@keyframes pop{0%{transform:scale(1.25);filter:brightness(2.4)}100%{transform:scale(1)}}
+
+/* ── 場地 ─────────────────────────────────────────────── */
+.arena{
+  position:relative;width:var(--arena);height:var(--arena);
+  border-radius:50%;touch-action:none;margin:4px 0;
+  background:radial-gradient(circle,#241a17 0%,#160f0e 100%);
+  box-shadow:
+    0 0 0 2px rgba(217,164,65,.35),
+    0 0 0 9px rgba(18,13,12,.9),
+    0 0 0 10px rgba(217,164,65,.14),
+    0 0 70px -10px rgba(212,55,42,.35);
+  cursor:crosshair;
+}
+.quad{position:absolute;width:calc(50% - 2px);height:calc(50% - 2px);overflow:hidden;display:grid;place-items:center;transition:filter .15s}
+.quad .rune{font-family:var(--serif);font-size:calc(var(--arena) * .17);line-height:1;opacity:.92;user-select:none;text-shadow:0 0 16px currentColor}
+.q0{top:0;left:0;border-radius:100% 0 0 0;background:linear-gradient(135deg,rgba(162,70,154,.42),rgba(162,70,154,.16));color:var(--q0-ink)}
+.q1{top:0;right:0;border-radius:0 100% 0 0;background:linear-gradient(225deg,rgba(125,106,85,.45),rgba(125,106,85,.16));color:var(--q1-ink)}
+.q2{bottom:0;left:0;border-radius:0 0 0 100%;background:linear-gradient(45deg,rgba(79,130,102,.42),rgba(79,130,102,.16));color:var(--q2-ink)}
+.q3{bottom:0;right:0;border-radius:0 0 100% 0;background:linear-gradient(315deg,rgba(154,125,32,.45),rgba(154,125,32,.16));color:var(--q3-ink)}
+
+.quad::after{
+  content:"";position:absolute;inset:0;border-radius:inherit;opacity:0;pointer-events:none;
+  background:radial-gradient(circle at var(--ox) var(--oy),
+    rgba(255,245,215,1) 0%, rgba(255,176,60,.92) 30%, rgba(212,55,42,.75) 60%, rgba(212,55,42,0) 82%);
+}
+.q0::after{--ox:100%;--oy:100%} .q1::after{--ox:0%;--oy:100%}
+.q2::after{--ox:100%;--oy:0%}   .q3::after{--ox:0%;--oy:0%}
+.quad.boom::after{animation:blast .62s cubic-bezier(.15,.7,.3,1)}
+@keyframes blast{0%{opacity:0}8%{opacity:1}100%{opacity:0}}
+.quad.tell{filter:brightness(1.5)}
+
+.cross{position:absolute;inset:0;pointer-events:none}
+.cross i{position:absolute;background:rgba(236,225,204,.18)}
+.cross i:nth-child(1){left:50%;top:0;bottom:0;width:1px;transform:translateX(-.5px)}
+.cross i:nth-child(2){top:50%;left:0;right:0;height:1px;transform:translateY(-.5px)}
+
+.player{
+  position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;
+  border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,#fff 0%,var(--kin-hi) 35%,var(--shu) 80%);
+  box-shadow:0 0 0 2px rgba(18,13,12,.85), 0 0 18px 3px rgba(246,217,138,.6);
+  will-change:transform;
+}
+.player::after{content:"";position:absolute;left:50%;top:50%;width:3px;height:3px;margin:-1.5px 0 0 -1.5px;border-radius:50%;background:#2b1f1b}
+.player.dead{background:radial-gradient(circle,#fff,#888 40%,#333 80%);box-shadow:0 0 0 2px #000}
+
+.hud{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;z-index:5;width:88%}
+.hud .big{font-family:var(--serif);font-size:calc(var(--arena)*.14);line-height:1.05;letter-spacing:.08em;text-shadow:0 4px 30px #000, 0 0 24px rgba(212,55,42,.7)}
+.hud .small{margin-top:8px;font-size:13px;letter-spacing:.1em;color:var(--washi-dim);text-shadow:0 2px 12px #000}
+.hud.hide{display:none}
+.veil{position:absolute;inset:0;border-radius:50%;background:rgba(10,7,6,.62);backdrop-filter:blur(2px);z-index:4}
+.veil.hide{display:none}
+
+/* ── 計時條 ───────────────────────────────────────────── */
+.timeline{width:var(--arena);display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.tlbar{height:4px;background:rgba(236,225,204,.1);border-radius:2px;overflow:hidden}
+.tlfill{height:100%;width:0%;background:linear-gradient(90deg,var(--kin),var(--shu));transition:width .06s linear}
+.tlmeta{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--washi-dim);letter-spacing:.06em}
+.tlmeta b{color:var(--kin-hi);font-weight:600}
+
+/* ── 側欄 ─────────────────────────────────────────────── */
+.panel{border:1px solid rgba(217,164,65,.2);border-radius:4px;background:linear-gradient(180deg,rgba(43,31,27,.6),rgba(18,13,12,.8));padding:18px 18px 20px}
+.panel + .panel{margin-top:18px}
+.ptitle{font-family:var(--serif);font-size:15px;letter-spacing:.24em;color:var(--kin);padding-bottom:10px;margin-bottom:14px;border-bottom:1px solid rgba(217,164,65,.2)}
+
+.btn{display:block;width:100%;padding:13px;margin-bottom:10px;font-family:var(--serif);font-size:17px;letter-spacing:.28em;color:var(--washi);background:linear-gradient(180deg,#8e2a20,#5e1a14);border:1px solid rgba(246,217,138,.45);border-radius:3px;cursor:pointer;transition:transform .08s, filter .15s}
+.btn:hover{filter:brightness(1.18)}
+.btn:active{transform:translateY(1px)}
+.btn.ghost{background:linear-gradient(180deg,rgba(90,64,52,.5),rgba(30,21,19,.6));border-color:rgba(236,225,204,.2);font-size:14px;letter-spacing:.2em}
+.btn:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--kin-hi);outline-offset:2px}
+
+.field{margin-bottom:14px}
+.field label{display:flex;justify-content:space-between;font-size:12px;letter-spacing:.1em;color:var(--washi-dim);margin-bottom:6px}
+.field label b{color:var(--kin-hi);font-family:var(--mono);font-weight:600}
+select{width:100%;padding:8px 10px;font-family:var(--sans);font-size:13px;color:var(--washi);background:#1d1513;border:1px solid rgba(236,225,204,.2);border-radius:3px}
+input[type=range]{width:100%;accent-color:var(--shu);background:transparent}
+.check{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--washi);margin-bottom:9px;cursor:pointer}
+.check input{accent-color:var(--shu);width:15px;height:15px}
+
+
+
+.result-ok{color:#9df0c1} .result-no{color:#ff8f7a}
+
+@media (prefers-reduced-motion: reduce){ *{animation-duration:.01ms !important;transition-duration:.01ms !important} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header><div class="mark">Suzuku <span>Unreal</span></div></header>
+
+  <div class="grid">
+
+    <section class="stage">
+      <div class="runerow" id="rowTop"></div>
+
+      <div class="arena" id="arena">
+        <div class="quad q0" data-q="0"><span class="rune"></span></div>
+        <div class="quad q1" data-q="1"><span class="rune"></span></div>
+        <div class="quad q2" data-q="2"><span class="rune"></span></div>
+        <div class="quad q3" data-q="3"><span class="rune"></span></div>
+        <div class="cross"><i></i><i></i></div>
+        <div class="player" id="player"></div>
+        <div class="veil" id="veil"></div>
+        <div class="hud" id="hud">
+          <div class="big" id="hudBig">準備</div>
+          <div class="small" id="hudSmall">按 開始 或 空白鍵</div>
+        </div>
+      </div>
+
+      <div class="runerow" id="rowBot"></div>
+
+      <div class="timeline">
+        <div class="tlbar"><div class="tlfill" id="tlfill"></div></div>
+        <div class="tlmeta">
+          <span id="tlPhase">待機</span>
+          <span>下次爆炸 <b id="tlNext">—</b></span>
+        </div>
+      </div>
+    </section>
+
+    <aside>
+      <div class="panel">
+        <div class="ptitle">操作</div>
+        <button class="btn" id="btnStart">開　始</button>
+      </div>
+
+      <div class="panel">
+        <div class="ptitle">難度</div>
+
+        <div class="field">
+          <label>排列類型 <b id="vType"></b></label>
+          <select id="selType">
+            <option value="random">隨機（時鐘 / 對稱）</option>
+            <option value="clock">只練時鐘型</option>
+            <option value="mirror">只練對稱型</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>爆炸間隔 <b id="vInterval">1.0s</b></label>
+          <input type="range" id="rgInterval" min="0.5" max="1.6" step="0.1" value="1.0">
+        </div>
+
+        <div class="field">
+          <label>移動速度 <b id="vSpeed">300</b></label>
+          <input type="range" id="rgSpeed" min="180" max="460" step="20" value="300">
+        </div>
+
+        <div class="field">
+          <label>起手延遲 <b id="vLead">4.0s</b></label>
+          <input type="range" id="rgLead" min="1" max="8" step="0.5" value="4">
+        </div>
+
+        <div class="field">
+          <label>上下排間隔 <b id="vGap">4.0s</b></label>
+          <input type="range" id="rgGap" min="1" max="8" step="0.5" value="4">
+        </div>
+
+        <label class="check"><input type="checkbox" id="ckAssist"> 符文依地板配色（新手輔助）</label>
+        <label class="check"><input type="checkbox" id="ckTell"> 爆炸前預示地板</label>
+        <label class="check"><input type="checkbox" id="ckSound" checked> 音效</label>
+        <label class="check"><input type="checkbox" id="ckAuto"> 自動接下一輪</label>
+        <label class="check"><input type="checkbox" id="ckSurvive"> 被炸到後仍繼續跑完</label>
+      </div>
+
+    </aside>
+
+  </div>
+</div>
+
+<script>
+"use strict";
+
+const RUNES = ["向","水","十","之"];
+const CW = [0, 1, 3, 2];               // 順時針環狀：左上→右上→右下→左下
+const QNAME = ["左上","右上","左下","右下"];
+const LR = 200, PR = 13;
+
+const $ = s => document.querySelector(s);
+const arenaEl = $("#arena"), playerEl = $("#player");
+const quadEls = [...document.querySelectorAll(".quad")].sort((a,b)=>a.dataset.q-b.dataset.q);
+const runeEls = quadEls.map(q => q.querySelector(".rune"));
+const rowTop = $("#rowTop"), rowBot = $("#rowBot");
+const hud = $("#hud"), hudBig = $("#hudBig"), hudSmall = $("#hudSmall"), veil = $("#veil");
+const tlfill = $("#tlfill"), tlPhase = $("#tlPhase"), tlNext = $("#tlNext");
+
+const cfg = { type:"random", interval:1.0, speed:300, lead:4.0, gap:4.0,
+              assist:false, tell:false, sound:true, auto:false, survive:false };
+
+let phase = "idle";
+let t0 = 0, events = [], cursor = 0, endAt = 0;
+let quadRune = [0,1,2,3], lastRuneKey = "";
+let seqTop = [], seqBot = [], patternName = "";
+let px = 0, py = 0, hit = false, scale = 1;
+let topCells = [], botCells = [];
+
+const shuffle = a => { for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]];} return a; };
+
+function isRotational(four){
+  const idx = four.map(q => CW.indexOf(q));
+  const d = ((idx[1]-idx[0])%4+4)%4;
+  if(d !== 1 && d !== 3) return false;
+  for(let i=1;i<4;i++) if(((idx[i]-idx[i-1])%4+4)%4 !== d) return false;
+  return true;
+}
+function rotationalRun(){
+  const dir = Math.random() < .5 ? 1 : -1, start = Math.random()*4|0, out = [];
+  for(let i=0;i<4;i++) out.push(CW[((start + dir*i) % 4 + 4) % 4]);
+  return out;
+}
+/* 一排 = 八字：前四是四格各一次，後四依類型決定 */
+function makeSet(type){
+  let head;
+  if(type === "clock"){
+    head = rotationalRun();
+    return head.concat(head);
+  }
+  do { head = shuffle([0,1,2,3]); } while(isRotational(head));
+  return head.concat(head.slice().reverse());
+}
+function rollType(){
+  return cfg.type === "random" ? (Math.random() < .5 ? "clock" : "mirror") : cfg.type;
+}
+
+/* ── 音效 ─────────────────────────────────────────────── */
+let actx = null;
+function tone(freq, dur, type, vol){
+  if(!cfg.sound) return;
+  try{
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    if(actx.state === "suspended") actx.resume();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, actx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(Math.max(40,freq*.4), actx.currentTime+dur);
+    g.gain.setValueAtTime(vol, actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(.0008, actx.currentTime+dur);
+    o.connect(g).connect(actx.destination); o.start(); o.stop(actx.currentTime+dur+.02);
+  }catch(e){}
+}
+const sBoom = () => tone(150,.22,"sawtooth",.14);
+const sHit  = () => tone(70,.6,"square",.22);
+const sWin  = () => { tone(520,.15,"triangle",.14); setTimeout(()=>tone(780,.3,"triangle",.14),130); };
+
+/* ── 版面 ─────────────────────────────────────────────── */
+function relayout(){ scale = (arenaEl.clientWidth/2) / LR; drawPlayer(); }
+window.addEventListener("resize", relayout);
+function drawPlayer(){ playerEl.style.transform = `translate(${px*scale}px, ${py*scale}px)`; }
+function currentQuad(){ return (py<0 ? 0 : 2) + (px<0 ? 0 : 1); }
+
+/* ── 符文列 ───────────────────────────────────────────── */
+function buildRows(){
+  rowTop.innerHTML = ""; rowBot.innerHTML = "";
+  topCells = []; botCells = [];
+  const inkOf = q => getComputedStyle(document.documentElement).getPropertyValue(`--q${q}-ink`);
+  const make = (q, i, row) => {
+    const d = document.createElement("div");
+    d.className = "cell";
+    d.textContent = RUNES[quadRune[q]];
+    if(cfg.assist) d.style.color = inkOf(q);
+    row.appendChild(d);
+    return d;
+  };
+  seqTop.forEach((q,i) => topCells.push(make(q,i,rowTop)));
+  seqBot.forEach((q,i) => botCells.push(make(q,i,rowBot)));
+}
+
+/* 每輪重新洗牌地板符文，且避免與上一輪完全相同 */
+function shuffleFloor(){
+  let k;
+  do { quadRune = shuffle([0,1,2,3]); k = quadRune.join(""); } while(k === lastRuneKey);
+  lastRuneKey = k;
+  runeEls.forEach((el,q) => el.textContent = RUNES[quadRune[q]]);
+}
+
+/* ── 一輪 ─────────────────────────────────────────────── */
+function newRound(){
+  const type = rollType();
+  patternName = type === "clock" ? "時鐘型" : "對稱型";
+  seqTop = makeSet(type);
+  seqBot = makeSet(type);
+  shuffleFloor();
+  buildRows();
+
+  events = [];
+  const iv = cfg.interval * 1000;
+  seqTop.forEach((q,i) => events.push({ t: cfg.lead*1000 + i*iv, q, row:0, i }));
+  const base = cfg.lead*1000 + 7*iv + cfg.gap*1000;
+  seqBot.forEach((q,i) => events.push({ t: base + i*iv, q, row:1, i }));
+  endAt = events[events.length-1].t + 900;
+
+  cursor = 0; hit = false;
+  px = 0; py = 0; drawPlayer();
+  playerEl.classList.remove("dead");
+  quadEls.forEach(el => el.classList.remove("boom","tell"));
+
+  phase = "live";
+  t0 = performance.now();
+  veil.classList.add("hide"); hud.classList.add("hide");
+  $("#btnStart").textContent = "重　來";
+  $("#vType").textContent = cfg.assist ? patternName : "";
+}
+
+function fire(ev){
+  const cell = (ev.row === 0 ? topCells : botCells)[ev.i];
+  cell.classList.remove("armed"); cell.classList.add("blown","pop");
+  const el = quadEls[ev.q];
+  el.classList.remove("boom","tell"); void el.offsetWidth; el.classList.add("boom");
+  sBoom();
+  if(!hit && currentQuad() === ev.q){
+    hit = true;
+    playerEl.classList.add("dead");
+    sHit();
+    if(!cfg.survive) finish(false, ev);
+  }
+}
+
+function finish(ok, ev){
+  phase = "over";
+  if(ok) sWin();
+
+  veil.classList.remove("hide"); hud.classList.remove("hide");
+  hudBig.textContent = ok ? "存活" : "被炸";
+  hudBig.className = "big " + (ok ? "result-ok" : "result-no");
+  hudSmall.textContent = ok
+    ? `${patternName} · 完美通過 · 空白鍵再來`
+    : `${patternName} · 死在「${RUNES[quadRune[ev.q]]}」${QNAME[ev.q]}`;
+  tlPhase.textContent = "結束"; tlNext.textContent = "—"; tlfill.style.width = "100%";
+  $("#vType").textContent = patternName;
+
+  if(cfg.auto) setTimeout(() => { if(phase === "over") newRound(); }, 1800);
+}
+
+/* ── 主迴圈 ───────────────────────────────────────────── */
+const keys = Object.create(null);
+let joy = null, last = performance.now();
+
+function loop(now){
+  const dt = Math.min(50, now - last) / 1000; last = now;
+
+  if(phase === "live"){
+    let vx = 0, vy = 0;
+    if(keys.up) vy -= 1; if(keys.down) vy += 1;
+    if(keys.left) vx -= 1; if(keys.right) vx += 1;
+    if(joy){ vx += joy.dx; vy += joy.dy; }
+    const m = Math.hypot(vx, vy);
+    if(m > 0){
+      vx /= m; vy /= m;
+      px += vx * cfg.speed * dt; py += vy * cfg.speed * dt;
+      const r = Math.hypot(px, py), max = LR - PR;
+      if(r > max){ px = px / r * max; py = py / r * max; }
+      drawPlayer();
+    }
+
+    const t = now - t0;
+    while(cursor < events.length && t >= events[cursor].t){ fire(events[cursor]); cursor++; }
+
+    const nx = events[cursor];
+    if(nx){
+      const left = (nx.t - t) / 1000;
+      tlNext.textContent = left.toFixed(1) + "s";
+      (nx.row === 0 ? topCells : botCells)[nx.i].classList.add("armed");
+      quadEls.forEach(el => el.classList.remove("tell"));
+      if(cfg.tell && left < .45) quadEls[nx.q].classList.add("tell");
+      tlPhase.textContent = cursor === 0 ? "起手倒數"
+        : (cursor === 8 ? "上下排空檔"
+        : `${nx.row === 0 ? "上排" : "下排"} ${nx.i + 1} / 8`);
+      tlfill.style.width = Math.min(100, t / endAt * 100) + "%";
+    }else if(t >= endAt){
+      finish(!hit, null);
+    }
+  }
+  requestAnimationFrame(loop);
+}
+
+/* ── 輸入 ─────────────────────────────────────────────── */
+const KEYMAP = { KeyW:"up", ArrowUp:"up", KeyS:"down", ArrowDown:"down",
+                 KeyA:"left", ArrowLeft:"left", KeyD:"right", ArrowRight:"right" };
+addEventListener("keydown", e => {
+  if(e.code === "Space" || e.code === "Enter"){ e.preventDefault(); newRound(); return; }
+  const k = KEYMAP[e.code];
+  if(k){ e.preventDefault(); keys[k] = true; }
+});
+addEventListener("keyup", e => { const k = KEYMAP[e.code]; if(k){ e.preventDefault(); keys[k] = false; } });
+addEventListener("blur", () => { for(const k in keys) keys[k] = false; joy = null; });
+
+arenaEl.addEventListener("pointerdown", e => {
+  arenaEl.setPointerCapture(e.pointerId);
+  joy = { ox:e.clientX, oy:e.clientY, dx:0, dy:0 };
+});
+arenaEl.addEventListener("pointermove", e => {
+  if(!joy) return;
+  const dx = e.clientX - joy.ox, dy = e.clientY - joy.oy, d = Math.hypot(dx, dy);
+  if(d < 8){ joy.dx = joy.dy = 0; return; }
+  joy.dx = dx / d; joy.dy = dy / d;
+});
+const dropJoy = () => { joy = null; };
+arenaEl.addEventListener("pointerup", dropJoy);
+arenaEl.addEventListener("pointercancel", dropJoy);
+
+/* ── 設定綁定 ─────────────────────────────────────────── */
+function bindRange(id, key, out, fmt){
+  const el = $(id);
+  const sync = () => { cfg[key] = parseFloat(el.value); $(out).textContent = fmt(cfg[key]); };
+  el.addEventListener("input", sync); sync();
+}
+bindRange("#rgInterval","interval","#vInterval", v => v.toFixed(1)+"s");
+bindRange("#rgSpeed","speed","#vSpeed", v => String(v|0));
+bindRange("#rgLead","lead","#vLead", v => v.toFixed(1)+"s");
+bindRange("#rgGap","gap","#vGap", v => v.toFixed(1)+"s");
+
+$("#selType").addEventListener("change", e => cfg.type = e.target.value);
+const bindCheck = (id, key, after) => {
+  const el = $(id); el.checked = cfg[key];
+  el.addEventListener("change", () => { cfg[key] = el.checked; if(after) after(); });
+};
+bindCheck("#ckAssist","assist", () => { if(topCells.length) buildRows(); });
+bindCheck("#ckTell","tell");
+bindCheck("#ckSound","sound");
+bindCheck("#ckAuto","auto");
+bindCheck("#ckSurvive","survive");
+
+$("#btnStart").addEventListener("click", newRound);
+
+/* ── 啟動 ─────────────────────────────────────────────── */
+const t0type = rollType();
+patternName = t0type === "clock" ? "時鐘型" : "對稱型";
+seqTop = makeSet(t0type); seqBot = makeSet(t0type);
+shuffleFloor(); buildRows();
+topCells.concat(botCells).forEach(c => c.classList.add("blown"));
+relayout();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
